@@ -1,0 +1,20 @@
+node_modules/
+dist/
+vendor/
+*.log
+.DS_Store
+.vscode/
+.idea/
+*.tsbuildinfo
+coverage/
+.phpunit.result.cache
+.phpunit.cache/
+composer.lock
+
+# Windows OS files
+Thumbs.db
+Desktop.ini
+
+# Editor backups
+*.swp
+*~
