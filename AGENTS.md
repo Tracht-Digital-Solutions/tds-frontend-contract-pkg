@@ -37,6 +37,24 @@ and the time tracker all contribute dashboard cards through it; the base
 Dashboard is the host (renders enabled + permitted widgets, persists per-user
 layout = the "user-based dashboard").
 
+## Core services for modules (backend)
+
+A `Module::register(App $app)` gets the Slim app, whose **DI container the base
+populates** with the services extensions may need. Modules resolve them via
+`$app->getContainer()->get(...)` — they never re-implement auth, email, or DB
+config:
+
+- **`Mailer`** (+ the `Email` value object) — the core's SMTP sender. Config +
+  From identity live in the base; a module only builds an `Email` and sends it.
+  Unconfigured SMTP → a no-op mailer (`isConfigured()` false).
+- **`UserContext`** — the authenticated principal from the verified JWT
+  (`userId`/`isAdmin`/`permissions`/`has`/`activeCompanyId`). Read it for RBAC +
+  tenant scoping; anonymous request → `isAuthenticated()` false.
+- **`PDO`** — the shared DB connection (standard class, no contract type).
+
+These interfaces are the shared vocabulary the base implements and modules
+consume — the PHP analogue of the shared permission catalog.
+
 ## Gotchas / invariants
 
 - **No namespacing across extensions.** Everything lands in one build, so a
