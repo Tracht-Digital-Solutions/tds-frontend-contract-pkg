@@ -105,7 +105,11 @@ jobs:
           node -e "const f='composer.json',j=require('./'+f);j.version='${new}'.replace(/^v/,'');require('fs').writeFileSync(f, JSON.stringify(j,null,2)+'\n')"
           git add package.json composer.json
           git commit -m "release: ${new}"
-          git tag "${new}"
+          # Annotated tag (-a): `git push --follow-tags` pushes ONLY annotated
+          # tags — a lightweight `git tag ${new}` would never reach the remote,
+          # so Composer (which resolves this package by VCS tag) would never see
+          # the release.
+          git tag -a "${new}" -m "release ${new}"
           npm publish
           git push --follow-tags origin HEAD:main
         env:
