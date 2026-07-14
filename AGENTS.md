@@ -48,8 +48,10 @@ config:
   From identity live in the base; a module only builds an `Email` and sends it.
   Unconfigured SMTP → a no-op mailer (`isConfigured()` false).
 - **`UserContext`** — the authenticated principal from the verified JWT
-  (`userId`/`isAdmin`/`permissions`/`has`/`activeCompanyId`). Read it for RBAC +
-  tenant scoping; anonymous request → `isAuthenticated()` false.
+  (`userId`/`email`/`isAdmin`/`permissions`/`has`/`activeCompanyId`). Read it for
+  RBAC + tenant scoping + notification recipients; anonymous → `isAuthenticated()`
+  false. NB adding a method here is breaking for *implementers* (the core) but not
+  for callers (extensions) — bump the core's impls in lockstep.
 - **`PDO`** — the shared DB connection (standard class, no contract type).
 
 These interfaces are the shared vocabulary the base implements and modules

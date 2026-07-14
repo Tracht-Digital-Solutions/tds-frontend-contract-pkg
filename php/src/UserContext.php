@@ -21,6 +21,9 @@ interface UserContext
     /** The app_user id, or null when anonymous. */
     public function userId(): ?int;
 
+    /** The principal's email (JWT `email` claim), or null when absent/anonymous. */
+    public function email(): ?string;
+
     /** True for an admin principal (bypasses permission checks). */
     public function isAdmin(): bool;
 
