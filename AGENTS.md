@@ -24,7 +24,7 @@ Build-time, not runtime. The panels are Astro `output: "static"` (no Node on
 prod) and the API is one in-process PHP-FPM app (the gateway `inprocess` model),
 so there is **no runtime plugin loader**. Composition is: the base imports each
 extension's manifest/module and folds it into one static build / one in-process
-app. This is the generalisation of the `tds-shared` build-time package pattern.
+app. This is the generalisation of the `tds-shared-pkg` build-time package pattern.
 
 ## Contribution slots
 

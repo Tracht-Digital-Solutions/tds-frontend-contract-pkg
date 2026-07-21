@@ -20,7 +20,7 @@ The panels are Astro `output: "static"` with **no Node runtime on production**
 `inprocess` model). So there is no runtime plugin loader: the base imports each
 extension's manifest/module and folds it into **one** static `dist/` and **one**
 in-process API. Enabling an extension = add a dependency + one line in the
-product's config. This is the same pattern `tds-shared` already uses, generalised
+product's config. This is the same pattern `tds-shared-pkg` already uses, generalised
 from "shared design" to "mountable features".
 
 ## Frontend contract (TypeScript)

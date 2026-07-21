@@ -43,6 +43,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Tracht-Digital-Solutions/tds-panel-contract.git"
+    "url": "git+https://github.com/Tracht-Digital-Solutions/tds-panel-contract-pkg.git"
   }
 }
