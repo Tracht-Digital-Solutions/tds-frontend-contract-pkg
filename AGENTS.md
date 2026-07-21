@@ -37,6 +37,19 @@ and the time tracker all contribute dashboard cards through it; the base
 Dashboard is the host (renders enabled + permitted widgets, persists per-user
 layout = the "user-based dashboard").
 
+**Extension routes are wrapped in the host `Layout` (`panelHost({ layout })`).**
+An extension `pages/*.astro` renders only its **content** (a `<section>` + its
+islands) — NOT a full `<html>` document. So `panelHost` must be given the host
+shell Layout (`layout: ".../tds-core-panel-frontend/src/layouts/Layout.astro"`);
+it then generates one thin wrapper `.astro` per route (`<Layout><Page/></Layout>`,
+under `node_modules/.tds-panel/routes/`) and injects THAT, so the page renders
+inside the full panel chrome (head/CSS/fonts/auth-gate/nav). **Omit `layout` and
+every extension page ships as a bare, unstyled fragment** (no `<head>`, no CSS
+link) — this was the "admin panel has no formatting" bug. Base pages (injected by
+`corePanelBase()`) import the Layout themselves, so they were never affected.
+The wrapper approach assumes static extension routes (no per-route
+`getStaticPaths`); the current extensions all ship a single static index page.
+
 ## Core services for modules (backend)
 
 A `Module::register(App $app)` gets the Slim app, whose **DI container the base

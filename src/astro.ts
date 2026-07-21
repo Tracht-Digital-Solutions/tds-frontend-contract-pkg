@@ -30,6 +30,8 @@
  * with the real `AstroIntegration`.
  */
 
+import { mkdirSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { composeExtensions } from "./registry.js";
 import type { ComposedRegistry, ExtensionManifest, SettingsPanel, WidgetManifest } from "./types.js";
 
@@ -44,6 +46,8 @@ export interface AstroIntegrationLike {
   name: string;
   hooks: {
     "astro:config:setup"?: (options: {
+      /** Resolved config so far — we only read `root` (to place generated wrappers). */
+      config: { root: URL };
       injectRoute: (route: { pattern: string; entrypoint: string; prerender?: boolean }) => void;
       updateConfig: (config: Record<string, unknown>) => void;
       logger: { info: (msg: string) => void; warn: (msg: string) => void };
@@ -54,6 +58,18 @@ export interface AstroIntegrationLike {
 export interface PanelHostOptions {
   /** The enabled extensions for this product build. */
   extensions: ExtensionManifest[];
+  /**
+   * Import specifier of the host shell `Layout` (an `.astro` component taking a
+   * `title` prop + a default slot). When set, every extension route is injected
+   * WRAPPED in this Layout so it renders the full panel chrome (head/CSS/nav) —
+   * not a bare `<section>` fragment. Products pass the host's Layout, e.g.
+   * `"@tracht-digital-solutions/tds-core-panel-frontend/src/layouts/Layout.astro"`.
+   *
+   * Omitted → routes are injected raw (legacy behaviour; the page must supply
+   * its own `<html>`). Base pages injected by `corePanelBase()` always wrap
+   * themselves, so this only affects extension-contributed routes.
+   */
+  layout?: string;
 }
 
 /**
@@ -64,22 +80,64 @@ export interface PanelHostOptions {
 export function panelHost(options: PanelHostOptions): AstroIntegrationLike {
   const registry: ComposedRegistry = composeExtensions(options.extensions);
 
+  // Map each route pattern → its nav label, so a wrapped page gets a real
+  // <title> (falls back to the extension chrome default when a route has no nav).
+  const navLabel = new Map(registry.nav.map((n) => [n.href, n.label]));
+
   return {
     name: "panel-host",
     hooks: {
-      "astro:config:setup": ({ injectRoute, updateConfig, logger }) => {
-        for (const route of registry.routes) {
-          injectRoute({ pattern: route.pattern, entrypoint: route.entrypoint });
+      "astro:config:setup": ({ config, injectRoute, updateConfig, logger }) => {
+        // When a Layout is supplied, we generate one thin wrapper .astro per
+        // extension route (importing the Layout + the extension page) and inject
+        // THAT — so the extension page renders inside the full panel chrome
+        // instead of as a bare fragment with no <head>/CSS/nav. The wrappers are
+        // build artifacts under the product's node_modules cache dir.
+        let routesDir: URL | undefined;
+        if (options.layout) {
+          routesDir = new URL("node_modules/.tds-panel/routes/", config.root);
+          mkdirSync(routesDir, { recursive: true });
         }
+
+        for (const route of registry.routes) {
+          if (options.layout && routesDir) {
+            const slug = route.pattern.replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "") || "index";
+            const file = new URL(`${slug}.astro`, routesDir);
+            const title = navLabel.get(route.pattern) ?? "Panel";
+            writeFileSync(file, wrapperSource(options.layout, route.entrypoint, title));
+            injectRoute({ pattern: route.pattern, entrypoint: fileURLToPath(file) });
+          } else {
+            injectRoute({ pattern: route.pattern, entrypoint: route.entrypoint });
+          }
+        }
+
         updateConfig({ vite: { plugins: [panelRegistryVitePlugin(registry)] } });
         logger.info(
           `panel-host: ${registry.order.length} extension(s) [${registry.order.join(", ")}], ` +
-            `${registry.routes.length} route(s), ${registry.widgets.length} widget(s), ` +
-            `${registry.settings.length} settings panel(s)`,
+            `${registry.routes.length} route(s)${options.layout ? " (Layout-wrapped)" : ""}, ` +
+            `${registry.widgets.length} widget(s), ${registry.settings.length} settings panel(s)`,
         );
       },
     },
   };
+}
+
+/**
+ * Source of a generated route wrapper: import the host Layout + the extension's
+ * page component and render the page inside the Layout's default slot. The page
+ * keeps rendering its own `<section>` + hydrated islands; the Layout supplies
+ * the `<html>`/`<head>` (CSS, fonts, auth-gate) + nav chrome around it.
+ */
+function wrapperSource(layout: string, entrypoint: string, title: string): string {
+  return (
+    `---\n` +
+    `import Layout from ${JSON.stringify(layout)};\n` +
+    `import Page from ${JSON.stringify(entrypoint)};\n` +
+    `---\n` +
+    `<Layout title={${JSON.stringify(title)}}>\n` +
+    `  <Page />\n` +
+    `</Layout>\n`
+  );
 }
 
 /** Minimal structural mirror of a Vite plugin (the two hooks we use). */

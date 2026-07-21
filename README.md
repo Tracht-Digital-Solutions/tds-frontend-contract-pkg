@@ -54,7 +54,13 @@ import { panelHost } from "@tracht-digital-solutions/tds-panel-contract/astro";
 import timeTracker from "@tracht-digital-solutions/tds-ext-time-tracker";
 // ...
 export default defineConfig({
-  integrations: [panelHost({ extensions: [timeTracker /*, ...*/] })],
+  integrations: [
+    panelHost({
+      extensions: [timeTracker /*, ...*/],
+      // Wrap every extension route in the host shell Layout (head/CSS/nav).
+      layout: "@tracht-digital-solutions/tds-core-panel-frontend/src/layouts/Layout.astro",
+    }),
+  ],
 });
 ```
 
@@ -62,6 +68,12 @@ export default defineConfig({
 conflict / missing dependency), `injectRoute()`s every route, and exposes the
 flattened registry as the virtual module `virtual:panel-registry` for the shell
 to render nav / widgets / settings from.
+
+**Always pass `layout`.** An extension `pages/*.astro` renders only its content
+(a `<section>` + islands), not a full `<html>` document. With `layout` set,
+`panelHost` generates a per-route wrapper that renders the page inside that shell
+Layout, so it gets the panel chrome (head, CSS, fonts, auth-gate, nav). Omit it
+and every extension page ships as a bare, unstyled fragment.
 
 ## Backend contract (PHP)
 
