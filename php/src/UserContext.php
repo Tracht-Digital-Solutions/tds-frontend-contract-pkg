@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Tds\Panel\Contract;
+namespace Tds\Frontend\Contract;
 
 /**
  * The authenticated principal for the current request, exposed to modules

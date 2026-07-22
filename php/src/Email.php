@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Tds\Panel\Contract;
+namespace Tds\Frontend\Contract;
 
 /**
  * A transactional email a module hands to the core {@see Mailer}. The core owns

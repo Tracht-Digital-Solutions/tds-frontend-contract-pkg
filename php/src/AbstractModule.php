@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Tds\Panel\Contract;
+namespace Tds\Frontend\Contract;
 
 /**
  * Convenience base: an extension only overrides what it actually contributes.

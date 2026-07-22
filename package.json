@@ -1,5 +1,5 @@
 {
-  "name": "@tracht-digital-solutions/tds-panel-contract",
+  "name": "@tracht-digital-solutions/tds-frontend-contract",
   "version": "1.4.1",
   "description": "The panel extension contract (SDK): TypeScript types + build-time composition helpers that let a base panel discover and compose extensions at build time. The PHP backend Module contract ships in the same repo as a Composer package.",
   "license": "UNLICENSED",
@@ -43,6 +43,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Tracht-Digital-Solutions/tds-panel-contract-pkg.git"
+    "url": "git+https://github.com/Tracht-Digital-Solutions/tds-frontend-contract-pkg.git"
   }
 }

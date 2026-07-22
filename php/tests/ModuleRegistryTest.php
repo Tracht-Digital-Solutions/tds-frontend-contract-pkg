@@ -1,14 +1,14 @@
 <?php
 declare(strict_types=1);
 
-namespace Tds\Panel\Contract\Tests;
+namespace Tds\Frontend\Contract\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Slim\App;
-use Tds\Panel\Contract\AbstractModule;
-use Tds\Panel\Contract\ModuleException;
-use Tds\Panel\Contract\ModuleRegistry;
-use Tds\Panel\Contract\PermissionDef;
+use Tds\Frontend\Contract\AbstractModule;
+use Tds\Frontend\Contract\ModuleException;
+use Tds\Frontend\Contract\ModuleRegistry;
+use Tds\Frontend\Contract\PermissionDef;
 
 /** A test double module with configurable id/deps/permissions. */
 final class FakeModule extends AbstractModule

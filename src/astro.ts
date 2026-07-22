@@ -1,8 +1,8 @@
 /**
  * Astro-side glue for the panel extension contract.
  *
- * The host product (`core-panel-frontend`, built as the admin OR customer
- * target) spreads `panelHost({ extensions: [...] })` into its Astro `integrations`.
+ * The host product (`core-frontend`, built as the admin OR customer
+ * target) spreads `frontendHost({ extensions: [...] })` into its Astro `integrations`.
  * At build time it:
  *   1. composes the manifests ({@link composeExtensions}) — failing the build
  *      loudly on a conflict / missing-dep,
@@ -25,7 +25,7 @@
  * `output: "server"`, one static `dist/` per product.
  *
  * NB: we model Astro's integration shape structurally ({@link
- * AstroIntegrationLike}) instead of importing `astro`, so `panel-contract` stays
+ * AstroIntegrationLike}) instead of importing `astro`, so `frontend-contract` stays
  * dependency-free and builds in isolation; the object is assignment-compatible
  * with the real `AstroIntegration`.
  */
@@ -55,7 +55,7 @@ export interface AstroIntegrationLike {
   };
 }
 
-export interface PanelHostOptions {
+export interface FrontendHostOptions {
   /** The enabled extensions for this product build. */
   extensions: ExtensionManifest[];
   /**
@@ -63,10 +63,10 @@ export interface PanelHostOptions {
    * `title` prop + a default slot). When set, every extension route is injected
    * WRAPPED in this Layout so it renders the full panel chrome (head/CSS/nav) —
    * not a bare `<section>` fragment. Products pass the host's Layout, e.g.
-   * `"@tracht-digital-solutions/tds-core-panel-frontend/src/layouts/Layout.astro"`.
+   * `"@tracht-digital-solutions/tds-core-frontend/src/layouts/Layout.astro"`.
    *
    * Omitted → routes are injected raw (legacy behaviour; the page must supply
-   * its own `<html>`). Base pages injected by `corePanelBase()` always wrap
+   * its own `<html>`). Base pages injected by `coreFrontendBase()` always wrap
    * themselves, so this only affects extension-contributed routes.
    */
   layout?: string;
@@ -77,7 +77,7 @@ export interface PanelHostOptions {
  * conflicting or unsatisfied extension set fails the build immediately with a
  * clear message rather than producing a half-wired panel.
  */
-export function panelHost(options: PanelHostOptions): AstroIntegrationLike {
+export function frontendHost(options: FrontendHostOptions): AstroIntegrationLike {
   const registry: ComposedRegistry = composeExtensions(options.extensions);
 
   // Map each route pattern → its nav label, so a wrapped page gets a real
@@ -111,7 +111,7 @@ export function panelHost(options: PanelHostOptions): AstroIntegrationLike {
           }
         }
 
-        updateConfig({ vite: { plugins: [panelRegistryVitePlugin(registry)] } });
+        updateConfig({ vite: { plugins: [frontendRegistryVitePlugin(registry)] } });
         logger.info(
           `panel-host: ${registry.order.length} extension(s) [${registry.order.join(", ")}], ` +
             `${registry.routes.length} route(s)${options.layout ? " (Layout-wrapped)" : ""}, ` +
@@ -148,7 +148,7 @@ interface VitePluginLike {
 }
 
 /** Serves the three virtual modules the host imports. */
-function panelRegistryVitePlugin(registry: ComposedRegistry): VitePluginLike {
+function frontendRegistryVitePlugin(registry: ComposedRegistry): VitePluginLike {
   const resolved = new Map<string, string>(
     Object.values(MODULES).map((id) => [id, "\0" + id]),
   );

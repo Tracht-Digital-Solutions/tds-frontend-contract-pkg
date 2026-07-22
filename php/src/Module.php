@@ -1,14 +1,14 @@
 <?php
 declare(strict_types=1);
 
-namespace Tds\Panel\Contract;
+namespace Tds\Frontend\Contract;
 
 use Slim\App;
 
 /**
  * The backend half of the panel extension contract.
  *
- * A base API (`core-panel-api`) composes extensions IN PROCESS: it loads each
+ * A base API (`core-frontend-api`) composes extensions IN PROCESS: it loads each
  * extension's `Module` and, in dependency order, calls {@see Module::register()}
  * to mount routes, collects its {@see Module::migrations()} for the in-process
  * auto-migrator, and merges its {@see Module::permissions()} + {@see

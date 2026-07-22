@@ -1,8 +1,8 @@
 /**
  * The panel extension contract (frontend side).
  *
- * `panel-contract` is the single source of truth for how a **base panel**
- * (`core-panel-frontend`) discovers and composes **extensions** at BUILD time.
+ * `frontend-contract` is the single source of truth for how a **base panel**
+ * (`core-frontend`) discovers and composes **extensions** at BUILD time.
  * There is no runtime plugin loading — the host imports each extension's
  * {@link ExtensionManifest} and folds it into one static build (`output:
  * "static"`, no Node on prod). The PHP half of this package (`php/src/*`)

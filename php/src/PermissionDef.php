@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Tds\Panel\Contract;
+namespace Tds\Frontend\Contract;
 
 /**
  * A fine-grained RBAC capability a module introduces. The PHP twin of the

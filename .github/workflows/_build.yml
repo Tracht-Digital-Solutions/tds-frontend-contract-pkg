@@ -1,10 +1,10 @@
 name: Build (reusable)
 
-# Single source of truth for panel-contract. Called by ci.yml (PR gate, no
+# Single source of truth for frontend-contract. Called by ci.yml (PR gate, no
 # publish), dev.yml (prerelease -> @dev dist-tag) and release.yml (version bump
 # -> @latest + push tag). Behaviour selected via the inputs below.
 #
-# panel-contract is a DUAL package: the TypeScript half publishes to GitHub
+# frontend-contract is a DUAL package: the TypeScript half publishes to GitHub
 # Packages (npm); the PHP half is a Composer package consumed via a VCS repo, so
 # its "release" IS the git tag pushed here - no separate registry publish. Both
 # test suites gate every run.
@@ -136,7 +136,7 @@ jobs:
         if: ${{ inputs.publish_tag != 'none' }}
         uses: actions/delete-package-versions@v5
         with:
-          package-name: tds-panel-contract
+          package-name: tds-frontend-contract
           package-type: npm
           min-versions-to-keep: 5
           delete-only-pre-release-versions: 'true'
@@ -147,7 +147,7 @@ jobs:
         if: ${{ inputs.publish_tag == 'latest' }}
         uses: actions/delete-package-versions@v5
         with:
-          package-name: tds-panel-contract
+          package-name: tds-frontend-contract
           package-type: npm
           min-versions-to-keep: 10
           ignore-versions: '^.*-.*$'

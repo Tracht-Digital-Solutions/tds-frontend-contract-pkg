@@ -1,6 +1,6 @@
-# panel-contract
+# frontend-contract
 
-The **panel extension contract** — the SDK that lets a *base panel* discover and
+The **frontend extension contract** — the SDK that lets a *base frontend* discover and
 compose *extensions* at **build time**. It is the foundation of the split of
 `tds-admin` into a slim **base** (users, wiki, dashboard host, UI shell, API
 kernel, email) plus feature **extensions** (time tracker, blog-CMS, website-CMS,
@@ -10,12 +10,12 @@ Two halves ship from this one repo:
 
 | Half | Package | Consumed by |
 |---|---|---|
-| **Frontend** (TypeScript) | `@tracht-digital-solutions/tds-panel-contract` (GitHub Packages) | `core-panel-frontend` + every extension's frontend package |
-| **Backend** (PHP) | `tracht-digital-solutions/tds-panel-contract` (Composer) | `core-panel-api` + every extension's backend package |
+| **Frontend** (TypeScript) | `@tracht-digital-solutions/tds-frontend-contract` (GitHub Packages) | `core-frontend` + every extension's frontend package |
+| **Backend** (PHP) | `tracht-digital-solutions/tds-frontend-contract` (Composer) | `core-frontend-api` + every extension's backend package |
 
 ## Why build-time composition
 
-The panels are Astro `output: "static"` with **no Node runtime on production**
+The frontends are Astro `output: "static"` with **no Node runtime on production**
 (Plesk), and the API runs every backend **in one PHP-FPM process** (the gateway's
 `inprocess` model). So there is no runtime plugin loader: the base imports each
 extension's manifest/module and folds it into **one** static `dist/` and **one**
@@ -28,7 +28,7 @@ from "shared design" to "mountable features".
 An extension exports an `ExtensionManifest` describing what it contributes:
 
 ```ts
-import { defineExtension } from "@tracht-digital-solutions/tds-panel-contract";
+import { defineExtension } from "@tracht-digital-solutions/tds-frontend-contract";
 
 export default defineExtension({
   id: "time-tracker",
@@ -50,29 +50,29 @@ persists per-user layout), `routes`, `settings`, `i18n`.
 The product host composes them in its `astro.config.mjs`:
 
 ```ts
-import { panelHost } from "@tracht-digital-solutions/tds-panel-contract/astro";
+import { frontendHost } from "@tracht-digital-solutions/tds-frontend-contract/astro";
 import timeTracker from "@tracht-digital-solutions/tds-ext-time-tracker";
 // ...
 export default defineConfig({
   integrations: [
-    panelHost({
+    frontendHost({
       extensions: [timeTracker /*, ...*/],
       // Wrap every extension route in the host shell Layout (head/CSS/nav).
-      layout: "@tracht-digital-solutions/tds-core-panel-frontend/src/layouts/Layout.astro",
+      layout: "@tracht-digital-solutions/tds-core-frontend/src/layouts/Layout.astro",
     }),
   ],
 });
 ```
 
-`panelHost` composes the manifests up front (failing the build loudly on a
+`frontendHost` composes the manifests up front (failing the build loudly on a
 conflict / missing dependency), `injectRoute()`s every route, and exposes the
-flattened registry as the virtual module `virtual:panel-registry` for the shell
+flattened registry as the virtual module `virtual:frontend-registry` for the shell
 to render nav / widgets / settings from.
 
 **Always pass `layout`.** An extension `pages/*.astro` renders only its content
 (a `<section>` + islands), not a full `<html>` document. With `layout` set,
-`panelHost` generates a per-route wrapper that renders the page inside that shell
-Layout, so it gets the panel chrome (head, CSS, fonts, auth-gate, nav). Omit it
+`frontendHost` generates a per-route wrapper that renders the page inside that shell
+Layout, so it gets the frontend chrome (head, CSS, fonts, auth-gate, nav). Omit it
 and every extension page ships as a bare, unstyled fragment.
 
 ## Backend contract (PHP)

@@ -1,5 +1,5 @@
 {
-  "name": "tracht-digital-solutions/tds-panel-contract",
+  "name": "tracht-digital-solutions/tds-frontend-contract",
   "description": "The panel extension contract (backend half): the Slim Module interface + ModuleRegistry a base API composes extensions against. The TypeScript frontend contract ships in the same repo as a GitHub Packages npm package.",
   "type": "library",
   "license": "proprietary",
@@ -14,12 +14,12 @@
   },
   "autoload": {
     "psr-4": {
-      "Tds\\Panel\\Contract\\": "php/src/"
+      "Tds\\Frontend\\Contract\\": "php/src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "Tds\\Panel\\Contract\\Tests\\": "php/tests/"
+      "Tds\\Frontend\\Contract\\Tests\\": "php/tests/"
     }
   },
   "config": {

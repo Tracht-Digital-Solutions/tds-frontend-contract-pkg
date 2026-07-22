@@ -1,17 +1,17 @@
-# AGENTS.md — panel-contract
+# AGENTS.md — frontend-contract
 
 Authoritative architecture/gotcha doc for this repo. Read before non-trivial changes.
 
 ## What this is
 
-`panel-contract` is the **SDK for the base-panel + extensions split** of the TDS
-admin platform. It defines *how* a base panel composes extensions — nothing more.
+`frontend-contract` is the **SDK for the base-frontend + extensions split** of the TDS
+admin platform. It defines *how* a base frontend composes extensions — nothing more.
 It contains **no features**: no routes, no UI, no DB. Two halves, one repo:
 
 - **TypeScript** (`src/`, published to GitHub Packages as
-  `@tracht-digital-solutions/tds-panel-contract`) — the frontend `ExtensionManifest`
-  + `composeExtensions` + the `panelHost` Astro integration (`./astro` export).
-- **PHP** (`php/src/`, Composer `tracht-digital-solutions/tds-panel-contract`) — the
+  `@tracht-digital-solutions/tds-frontend-contract`) — the frontend `ExtensionManifest`
+  + `composeExtensions` + the `frontendHost` Astro integration (`./astro` export).
+- **PHP** (`php/src/`, Composer `tracht-digital-solutions/tds-frontend-contract`) — the
   backend `Module` interface + `ModuleRegistry`.
 
 The two halves are **mirror images on purpose** (like the existing Zod ↔ PHP
@@ -20,7 +20,7 @@ mean the same thing on both sides. Change one shape → change its twin.
 
 ## The composition model (why it looks like this)
 
-Build-time, not runtime. The panels are Astro `output: "static"` (no Node on
+Build-time, not runtime. The frontends are Astro `output: "static"` (no Node on
 prod) and the API is one in-process PHP-FPM app (the gateway `inprocess` model),
 so there is **no runtime plugin loader**. Composition is: the base imports each
 extension's manifest/module and folds it into one static build / one in-process
@@ -37,16 +37,16 @@ and the time tracker all contribute dashboard cards through it; the base
 Dashboard is the host (renders enabled + permitted widgets, persists per-user
 layout = the "user-based dashboard").
 
-**Extension routes are wrapped in the host `Layout` (`panelHost({ layout })`).**
+**Extension routes are wrapped in the host `Layout` (`frontendHost({ layout })`).**
 An extension `pages/*.astro` renders only its **content** (a `<section>` + its
-islands) — NOT a full `<html>` document. So `panelHost` must be given the host
-shell Layout (`layout: ".../tds-core-panel-frontend/src/layouts/Layout.astro"`);
+islands) — NOT a full `<html>` document. So `frontendHost` must be given the host
+shell Layout (`layout: ".../tds-core-frontend/src/layouts/Layout.astro"`);
 it then generates one thin wrapper `.astro` per route (`<Layout><Page/></Layout>`,
-under `node_modules/.tds-panel/routes/`) and injects THAT, so the page renders
-inside the full panel chrome (head/CSS/fonts/auth-gate/nav). **Omit `layout` and
+under `node_modules/.tds-frontend/routes/`) and injects THAT, so the page renders
+inside the full frontend chrome (head/CSS/fonts/auth-gate/nav). **Omit `layout` and
 every extension page ships as a bare, unstyled fragment** (no `<head>`, no CSS
-link) — this was the "admin panel has no formatting" bug. Base pages (injected by
-`corePanelBase()`) import the Layout themselves, so they were never affected.
+link) — this was the "admin frontend has no formatting" bug. Base pages (injected by
+`coreFrontendBase()`) import the Layout themselves, so they were never affected.
 The wrapper approach assumes static extension routes (no per-route
 `getStaticPaths`); the current extensions all ship a single static index page.
 
@@ -83,7 +83,7 @@ consume — the PHP analogue of the shared permission catalog.
 - **`dependsOn` drives load order** (topological). Missing dep / cycle → throw,
   on both sides. "Extension extends extension" is expressed purely through
   `dependsOn` + targeting another extension's nav `group`.
-- **`panel-contract` stays dependency-light.** The TS side is pure (no `astro`
+- **`frontend-contract` stays dependency-light.** The TS side is pure (no `astro`
   dependency — the Astro integration is modelled structurally via
   `AstroIntegrationLike` so the package builds in isolation). The PHP side only
   depends on `slim/slim` (the framework every backend already uses). Don't pull

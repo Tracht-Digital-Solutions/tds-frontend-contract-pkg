@@ -1,7 +1,7 @@
 /**
  * Composition helpers for the panel extension contract.
  *
- * These run at BUILD time in the host (`core-panel-frontend`): the product's
+ * These run at BUILD time in the host (`core-frontend`): the product's
  * config imports each extension's {@link ExtensionManifest}, and
  * {@link composeExtensions} resolves dependency order, catches conflicts, and
  * flattens the contributions into one {@link ComposedRegistry} the shell +

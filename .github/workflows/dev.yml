@@ -2,7 +2,7 @@ name: Dev prerelease (push → GitHub Packages @dev)
 
 # On every push to main, publish a prerelease (<version>-dev.<run>) under the
 # `dev` dist-tag. It never becomes `latest`, so consumers' ^x.y.z ranges are
-# unaffected - opt in with `@tracht-digital-solutions/tds-panel-contract@dev`. Real
+# unaffected - opt in with `@tracht-digital-solutions/tds-frontend-contract@dev`. Real
 # versions ship via release.yml (manual button). Pipeline body in _build.yml.
 
 on:
