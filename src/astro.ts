@@ -1,5 +1,5 @@
 /**
- * Astro-side glue for the panel extension contract.
+ * Astro-side glue for the frontend extension contract.
  *
  * The host product (`core-frontend`, built as the admin OR customer
  * target) spreads `frontendHost({ extensions: [...] })` into its Astro `integrations`.
@@ -8,11 +8,15 @@
  *      loudly on a conflict / missing-dep,
  *   2. `injectRoute()`s every contributed route, and
  *   3. exposes three virtual modules the shell imports:
- *        - `virtual:panel-registry`  — the flattened {@link ComposedRegistry}
+ *        - `virtual:frontend-registry` — the flattened {@link ComposedRegistry}
  *          as data (nav, permissions, i18n, routes + widget/settings metadata).
- *        - `virtual:panel-widgets`   — the widgets with a real, statically
+ *        - `virtual:frontend-widgets`  — the widgets with a real, statically
  *          imported `Component`, so the Dashboard host can render them in a loop.
- *        - `virtual:panel-settings`  — ditto for the settings sections.
+ *        - `virtual:frontend-settings` — ditto for the settings sections.
+ *
+ *      The old `virtual:panel-*` spellings still resolve (see
+ *      {@link LEGACY_MODULES}) — they are public names, and this package is
+ *      stable at 1.x with additive minors only.
  *
  * Why two shapes: Astro can't hydrate a component named only by a runtime
  * string. So for the slots that render components (widgets, settings) we
@@ -35,11 +39,33 @@ import { fileURLToPath } from "node:url";
 import { composeExtensions } from "./registry.js";
 import type { ComposedRegistry, ExtensionManifest, SettingsPanel, WidgetManifest } from "./types.js";
 
+/**
+ * The canonical virtual-module ids. `panel` was the pre-rename name of the
+ * frontend platform; these are the last public `panel-` names in the SDK.
+ */
 const MODULES = {
-  registry: "virtual:panel-registry",
-  widgets: "virtual:panel-widgets",
-  settings: "virtual:panel-settings",
+  registry: "virtual:frontend-registry",
+  widgets: "virtual:frontend-widgets",
+  settings: "virtual:frontend-settings",
 } as const;
+
+/**
+ * Deprecated `virtual:panel-*` ids, still resolved so an older host keeps
+ * building against a newer contract.
+ *
+ * These are **public names** — a consumer writes them in an `import` — so
+ * dropping them outright would be a breaking change, and this package is
+ * stable at 1.x with additive minors only (consumers pin `^1.0.0`). Keeping
+ * them as aliases makes the rename a minor: the host migrates on its own
+ * schedule instead of every product needing a coordinated release.
+ *
+ * Remove them only in a deliberate 2.0.0.
+ */
+const LEGACY_MODULES: Readonly<Record<string, keyof typeof MODULES>> = {
+  "virtual:panel-registry": "registry",
+  "virtual:panel-widgets": "widgets",
+  "virtual:panel-settings": "settings",
+};
 
 /** Minimal structural mirror of `astro`'s `AstroIntegration` (build hooks we use). */
 export interface AstroIntegrationLike {
@@ -85,7 +111,7 @@ export function frontendHost(options: FrontendHostOptions): AstroIntegrationLike
   const navLabel = new Map(registry.nav.map((n) => [n.href, n.label]));
 
   return {
-    name: "panel-host",
+    name: "frontend-host",
     hooks: {
       "astro:config:setup": ({ config, injectRoute, updateConfig, logger }) => {
         // When a Layout is supplied, we generate one thin wrapper .astro per
@@ -95,7 +121,7 @@ export function frontendHost(options: FrontendHostOptions): AstroIntegrationLike
         // build artifacts under the product's node_modules cache dir.
         let routesDir: URL | undefined;
         if (options.layout) {
-          routesDir = new URL("node_modules/.tds-panel/routes/", config.root);
+          routesDir = new URL("node_modules/.tds-frontend/routes/", config.root);
           mkdirSync(routesDir, { recursive: true });
         }
 
@@ -113,7 +139,7 @@ export function frontendHost(options: FrontendHostOptions): AstroIntegrationLike
 
         updateConfig({ vite: { plugins: [frontendRegistryVitePlugin(registry)] } });
         logger.info(
-          `panel-host: ${registry.order.length} extension(s) [${registry.order.join(", ")}], ` +
+          `frontend-host: ${registry.order.length} extension(s) [${registry.order.join(", ")}], ` +
             `${registry.routes.length} route(s)${options.layout ? " (Layout-wrapped)" : ""}, ` +
             `${registry.widgets.length} widget(s), ${registry.settings.length} settings panel(s)`,
         );
@@ -147,25 +173,35 @@ interface VitePluginLike {
   load(id: string): string | undefined;
 }
 
-/** Serves the three virtual modules the host imports. */
+/**
+ * Serves the three virtual modules the host imports, under both the canonical
+ * `virtual:frontend-*` ids and the deprecated `virtual:panel-*` aliases.
+ *
+ * Both spellings resolve to the SAME internal id, so a build that mixes them
+ * (a migrating host, or a host one version behind) gets one module instance
+ * rather than two copies of the registry.
+ */
 function frontendRegistryVitePlugin(registry: ComposedRegistry): VitePluginLike {
-  const resolved = new Map<string, string>(
-    Object.values(MODULES).map((id) => [id, "\0" + id]),
-  );
+  /** public id → internal resolved id. */
+  const resolved = new Map<string, string>();
+  for (const id of Object.values(MODULES)) resolved.set(id, "\0" + id);
+  for (const [legacyId, slot] of Object.entries(LEGACY_MODULES)) {
+    resolved.set(legacyId, "\0" + MODULES[slot]);
+  }
 
   return {
-    name: "panel-registry",
+    name: "frontend-registry",
     resolveId(id) {
       return resolved.get(id);
     },
     load(id) {
-      if (id === resolved.get(MODULES.registry)) {
+      if (id === "\0" + MODULES.registry) {
         return `export const registry = ${JSON.stringify(registry)};\n`;
       }
-      if (id === resolved.get(MODULES.widgets)) {
+      if (id === "\0" + MODULES.widgets) {
         return generateComponentModule("widgets", registry.widgets);
       }
-      if (id === resolved.get(MODULES.settings)) {
+      if (id === "\0" + MODULES.settings) {
         return generateComponentModule("settings", registry.settings);
       }
       return undefined;
