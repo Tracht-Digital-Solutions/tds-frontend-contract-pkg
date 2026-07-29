@@ -121,9 +121,44 @@ consume — the PHP analogue of the shared permission catalog.
 ```bash
 npm run build        # tsup → dual ESM+CJS
 npm run type-check   # tsc --noEmit — must be 0 errors
-npm run test:run     # vitest (composition helpers)
+npm run test:run     # vitest, 66 tests (composition + the Astro host)
 composer test        # phpunit (ModuleRegistry)
 ```
+
+## Tests
+
+This package is the SDK **both halves of the platform depend on**, so a weak
+test here is a bug in fourteen extensions and two products at once.
+
+- `src/__tests__/registry.test.ts` — the original happy paths.
+- `src/__tests__/registry.collisions.test.ts` — the guard, which is the point
+  of the whole module. A product build folds every extension into ONE namespace
+  with no prefixing, so **each** contribution kind must throw on a duplicate id
+  (permission / nav / widget / settings / route) — asserted separately, since
+  one shared `Set` for all five would pass a test that only checks routes. Also
+  covered: duplicate extension ids, cycles (incl. self-dependency), diamonds,
+  missing dependencies, stable `order` sorting with the 100 default, routes
+  left deliberately unsorted, and i18n merge precedence (**later wins**, by
+  dependency order rather than argument order).
+- `src/__tests__/astro.test.ts` — the build-time host integration, previously
+  untested. The behaviour that matters most is the **Layout wrapping**: an
+  extension page renders only its own `<section>`, so when `layout` is supplied
+  the host must inject a generated wrapper and NOT the raw page. Injecting the
+  page raw is precisely the "admin panel has no formatting" bug fixed in 1.4.0,
+  and both directions are pinned. The wrapper's `<Page />` is asserted to be
+  **nested inside** `<Layout>`, not merely present — `<Layout></Layout>` followed
+  by `<Page />` contains every expected string and still renders outside the
+  chrome. Also: composition failures throw while CONSTRUCTING the integration
+  (not inside the hook, which would half-wire the panel), slug derivation for
+  the wrapper filenames, and the three virtual modules — including that
+  `resolveId` ignores ids it does not own, and that widgets/settings are served
+  with a real static `import` (Astro cannot hydrate a component named by a
+  runtime string).
+
+`node:fs` is mocked in the astro tests: the wrappers are build artifacts, and
+what matters is what would be written and which path gets injected.
+
+Verified by mutation: 47 deliberate breakages introduced, 47 caught.
 
 ## After a change
 
