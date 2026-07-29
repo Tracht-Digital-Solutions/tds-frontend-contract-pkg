@@ -90,6 +90,31 @@ consume — the PHP analogue of the shared permission catalog.
   feature deps in here.
 - **Labels are German editable copy.** They live with the contract/extension, per
   the TDS convention — never inline them in a page.
+- **The virtual-module ids are `virtual:frontend-{registry,widgets,settings}`,
+  and the old `virtual:panel-*` spellings must keep resolving.** They were the
+  last `panel-` names in the SDK (pre-rename) and they are **public** — a host
+  writes them in an `import` — so dropping them is a breaking change, and this
+  package is stable at **1.x with additive minors only** (`^1.0.0` pins).
+  Keeping them as aliases made the rename a *minor*: the host migrates on its
+  own schedule instead of every product needing a coordinated release. Both
+  spellings resolve to the **same internal id**, so a build that mixes them
+  (a migrating host) gets one module instance, not two copies of the registry —
+  `src/__tests__/astro.test.ts` asserts exactly that. Remove the aliases only
+  in a deliberate 2.0.0.
+  - The generated route-wrapper cache moved with it:
+    `node_modules/.tds-panel/routes/` → `.tds-frontend/routes/`. It is a build
+    artifact, so nothing needs migrating, but an old directory may linger in a
+    long-lived local `node_modules` (harmless — CI installs fresh).
+- **`vitest.config.ts` pins `include: ["src/**/*.test.ts"]` on purpose.** With
+  vitest's default glob, any `.claude/worktrees/*/src/**` checkout in the repo is
+  swept into the run, so the suite silently reports *another branch's* tests as
+  if they were this package's — including tests for the old virtual-module names.
+- **The `version` field is owned by the release workflow** (`npm version <bump>`
+  computes from what is committed), so check it against the registry before
+  touching it. It had drifted **behind**: the field said `1.4.1` while `1.4.2`
+  and `1.4.3` were already published, which made a *patch* release a guaranteed
+  409 (`1.4.2` exists) while a minor happened to survive. Reconciled to `1.4.3`.
+  `npm view … versions` is the check.
 
 ## Commands
 

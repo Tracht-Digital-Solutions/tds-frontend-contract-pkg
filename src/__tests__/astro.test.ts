@@ -128,7 +128,7 @@ describe("route injection WITH a layout", () => {
     runSetup(frontendHost({ extensions: [TIME], layout: LAYOUT }));
     expect(mkdirSync).toHaveBeenCalledTimes(1);
     const [dir, opts] = vi.mocked(mkdirSync).mock.calls[0]!;
-    expect(String(dir)).toContain("node_modules/.tds-panel/routes/");
+    expect(String(dir)).toContain("node_modules/.tds-frontend/routes/");
     expect(String(dir)).toContain("product");
     expect(opts).toEqual({ recursive: true });
   });
@@ -265,12 +265,12 @@ describe("the virtual modules", () => {
 
   it("is registered as a Vite plugin", () => {
     const p = setup();
-    expect(p.name).toBe("panel-registry");
+    expect(p.name).toBe("frontend-registry");
   });
 
   it("resolves the three virtual ids to internal module names", () => {
     const p = setup();
-    for (const id of ["virtual:panel-registry", "virtual:panel-widgets", "virtual:panel-settings"]) {
+    for (const id of ["virtual:frontend-registry", "virtual:frontend-widgets", "virtual:frontend-settings"]) {
       expect(p.resolveId(id), id).toBe(`\0${id}`);
     }
   });
@@ -285,7 +285,7 @@ describe("the virtual modules", () => {
 
   it("serves the composed registry as data", () => {
     const p = setup();
-    const code = p.load("\0virtual:panel-registry")!;
+    const code = p.load("\0virtual:frontend-registry")!;
     expect(code).toContain("export const registry =");
     const json = JSON.parse(code.slice(code.indexOf("{"), code.lastIndexOf("}") + 1));
     expect(json.order).toEqual(["time-tracker"]);
@@ -297,7 +297,7 @@ describe("the virtual modules", () => {
     // Astro cannot hydrate a component named by a runtime string, so the
     // generated module must contain a real import statement.
     const p = setup();
-    const code = p.load("\0virtual:panel-widgets")!;
+    const code = p.load("\0virtual:frontend-widgets")!;
     expect(code).toContain(`import __C0 from "ext-time/widgets/Week.astro";`);
     expect(code).toContain("export const widgets = [");
     expect(code).toContain("Component: __C0");
@@ -305,14 +305,14 @@ describe("the virtual modules", () => {
 
   it("keeps each widget's metadata alongside its component", () => {
     const p = setup();
-    const code = p.load("\0virtual:panel-widgets")!;
+    const code = p.load("\0virtual:frontend-widgets")!;
     expect(code).toContain('"id":"time-week"');
     expect(code).toContain('"title":"Diese Woche"');
   });
 
   it("serves settings panels the same way", () => {
     const p = setup();
-    const code = p.load("\0virtual:panel-settings")!;
+    const code = p.load("\0virtual:frontend-settings")!;
     expect(code).toContain(`import __C0 from "ext-time/islands/Settings.astro";`);
     expect(code).toContain("export const settings = [");
   });
@@ -328,7 +328,7 @@ describe("the virtual modules", () => {
       }),
     );
     const { configs } = runSetup(frontendHost({ extensions: [many] }));
-    const code = plugin(configs).load("\0virtual:panel-widgets")!;
+    const code = plugin(configs).load("\0virtual:frontend-widgets")!;
     expect(code).toContain(`import __C0 from "x/One.astro";`);
     expect(code).toContain(`import __C1 from "x/Two.astro";`);
     expect(code).toContain("Component: __C0");
@@ -339,8 +339,59 @@ describe("the virtual modules", () => {
     // A malformed module here breaks the whole product build, not just the
     // dashboard — an extension set with no widgets is perfectly normal.
     const { configs } = runSetup(frontendHost({ extensions: [] }));
-    const code = plugin(configs).load("\0virtual:panel-widgets")!;
+    const code = plugin(configs).load("\0virtual:frontend-widgets")!;
     expect(code).toContain("export const widgets = [");
     expect(code).not.toContain("import __C");
+  });
+});
+
+/**
+ * The virtual-module ids are PUBLIC names — a host writes them in an `import`.
+ * They were renamed `virtual:panel-*` → `virtual:frontend-*` (the last `panel-`
+ * names in the SDK). This package is stable at 1.x with additive minors only
+ * (consumers pin `^1.0.0`), so the old spellings MUST keep resolving: dropping
+ * them would break any host one version behind, at build time. Remove the
+ * aliases only in a deliberate 2.0.0.
+ */
+describe("the deprecated virtual:panel-* aliases", () => {
+  const LEGACY = ["virtual:panel-registry", "virtual:panel-widgets", "virtual:panel-settings"] as const;
+  const CANONICAL = ["virtual:frontend-registry", "virtual:frontend-widgets", "virtual:frontend-settings"] as const;
+
+  const setup = () => plugin(runSetup(frontendHost({ extensions: [TIME] })).configs);
+
+  it("names the integration and its log prefix after the platform", () => {
+    expect(frontendHost({ extensions: [] }).name).toBe("frontend-host");
+    const { logs } = runSetup(frontendHost({ extensions: [TIME] }));
+    expect(logs.join("\n")).toContain("frontend-host:");
+    expect(logs.join("\n")).not.toContain("panel-host:");
+  });
+
+  it("still resolves every legacy spelling", () => {
+    const p = setup();
+    for (const id of LEGACY) expect(p.resolveId(id), id).toBeDefined();
+  });
+
+  it("maps each alias to the SAME internal id as its canonical name", () => {
+    // Two internal ids would mean two module instances — two copies of the
+    // registry in one build. That is the regression this pins down, and it is
+    // why the aliases share a resolution table rather than each getting a \0id.
+    const p = setup();
+    LEGACY.forEach((legacy, i) => {
+      expect(p.resolveId(legacy), legacy).toBe(p.resolveId(CANONICAL[i]!));
+    });
+  });
+
+  it("serves identical content through an alias and its canonical id", () => {
+    const p = setup();
+    LEGACY.forEach((legacy, i) => {
+      expect(p.load(p.resolveId(legacy)!), legacy).toBe(p.load(p.resolveId(CANONICAL[i]!)!));
+    });
+  });
+
+  it("does not load a bare, unresolved id", () => {
+    // Vite passes the resolved (\0-prefixed) form; anything else is not ours.
+    const p = setup();
+    expect(p.load("virtual:frontend-registry")).toBeUndefined();
+    expect(p.load("virtual:panel-registry")).toBeUndefined();
   });
 });

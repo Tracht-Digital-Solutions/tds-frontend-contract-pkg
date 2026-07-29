@@ -1,6 +1,6 @@
 {
   "name": "tracht-digital-solutions/tds-frontend-contract",
-  "description": "The panel extension contract (backend half): the Slim Module interface + ModuleRegistry a base API composes extensions against. The TypeScript frontend contract ships in the same repo as a GitHub Packages npm package.",
+  "description": "The frontend extension contract (backend half): the Slim Module interface + ModuleRegistry a base API composes extensions against. The TypeScript frontend contract ships in the same repo as a GitHub Packages npm package.",
   "type": "library",
   "license": "proprietary",
   "version": "1.4.5",
