@@ -106,6 +106,23 @@ final class ModuleRegistry
     }
 
     /**
+     * The modules that contribute to the live notification feed.
+     *
+     * {@see NotificationSource} is an OPTIONAL capability — most modules do not
+     * implement it, and that is not an error. Filtering here keeps the
+     * `instanceof` in one place instead of in the base's feed route.
+     *
+     * @return NotificationSource[] dependency-ordered
+     */
+    public function notificationSources(): array
+    {
+        return array_values(array_filter(
+            $this->ordered,
+            static fn (Module $m): bool => $m instanceof NotificationSource,
+        ));
+    }
+
+    /**
      * Kahn-style topological sort by dependsOn.
      *
      * @param array<string, Module> $byId

@@ -70,6 +70,30 @@ config:
 These interfaces are the shared vocabulary the base implements and modules
 consume — the PHP analogue of the shared permission catalog.
 
+### Optional capability: `NotificationSource` (1.6.0)
+
+A module may additionally `implements NotificationSource` to feed the panel's
+live notifications. The shell polls **one** endpoint (`GET /me/notifications`)
+on every page; the base hands each source its own opaque cursor, merges the
+items and encodes the cursors back. Three rules that are easy to get wrong:
+
+- **`$cursor === null` is the first call: return the cursor, no items.**
+  Otherwise every freshly opened tab toasts the whole backlog.
+- **RBAC lives in the source**, not the base — the base cannot know what an
+  event requires. No permission ⇒ `items: []` **but still the cursor**, so
+  granting the permission later does not replay the interim.
+- **Never throw.** One broken source would take the whole feed down, and with
+  it the shell's poll.
+
+The wire shape has a TS twin (`NotificationItem` / `NotificationFeed` in
+`src/types.ts`) so the host's poller and the extension islands agree on it. Note
+there is deliberately **no manifest slot**: joining the feed is a backend
+decision, which is what keeps it at one poll for all modules instead of one
+interval per extension on every page.
+
+Being optional is what makes this a MINOR: a module that does not implement it
+is unchanged and still valid.
+
 ## Gotchas / invariants
 
 - **No namespacing across extensions.** Everything lands in one build, so a
@@ -165,3 +189,11 @@ Verified by mutation: 47 deliberate breakages introduced, 47 caught.
 Update this file + README, and bump the version in **both** `package.json` and
 `composer.json` (keep them in lockstep — they are one release). Commit code +
 docs + version together.
+
+> **But do NOT hand-bump for a normal release.** `release.yml` runs
+> `npm version <bump>` over what is committed and writes both files itself, then
+> pushes the bump commit + the annotated tag. Bumping by hand first makes the
+> workflow skip a version (and, if the field has drifted *behind* the registry, a
+> guaranteed 409). Choose the bump on the button instead — this change is a
+> **minor** (the optional `NotificationSource` capability). Hand-editing is only
+> for reconciling drift, checked against `npm view … versions`.

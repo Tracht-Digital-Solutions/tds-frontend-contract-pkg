@@ -10,6 +10,8 @@ export type {
   ExtensionManifest,
   I18nStrings,
   NavEntry,
+  NotificationFeed,
+  NotificationItem,
   PermissionDef,
   RouteDef,
   SettingsPanel,

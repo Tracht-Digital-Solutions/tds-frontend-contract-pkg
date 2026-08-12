@@ -135,6 +135,37 @@ export interface ExtensionManifest {
 }
 
 /**
+ * One event from the panel's live notification feed (`GET /me/notifications`).
+ *
+ * The wire shape of the PHP `NotificationSource` capability — declared here so
+ * the shell's poller and any list that wants to refresh itself agree on it
+ * without either importing the other. There is no manifest slot for this: a
+ * module joins the feed on the BACKEND, which is what keeps one poll serving
+ * every module instead of one interval per extension on every page.
+ */
+export interface NotificationItem {
+  /** Globally unique, `"<module-id>:<local-id>"`. Doubles as the toast dedup key. */
+  id: string;
+  /** The contributing module's id — lets a list filter for its own events. */
+  module: string;
+  /** Machine-readable event kind, e.g. `"contact.new"`. Never shown. */
+  kind: string;
+  /** Ready-to-read plain text. The toast renders text, never HTML. */
+  message: string;
+  /** Same-document path the toast links to. */
+  href?: string;
+  variant?: "info" | "success" | "warning" | "danger";
+  /** ISO-8601. The base sorts the merged feed by it. */
+  created_at?: string;
+}
+
+/** The feed response. `cursor` is opaque — echo it back on the next poll. */
+export interface NotificationFeed {
+  cursor: string;
+  items: NotificationItem[];
+}
+
+/**
  * The flattened result of composing a set of extensions for one product build.
  * Produced by `composeExtensions` and consumed by the host shell + Astro
  * integration. Arrays are dependency-ordered then sorted by `order`.
