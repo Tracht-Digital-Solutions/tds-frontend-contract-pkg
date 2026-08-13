@@ -94,6 +94,36 @@ interval per extension on every page.
 Being optional is what makes this a MINOR: a module that does not implement it
 is unchanged and still valid.
 
+### Optional capability: `ApiDocSource` (1.7.0)
+
+A module may additionally `implements ApiDocSource` to describe its routes for
+the admin frontend's API reference (`GET /wiki.json`). Same shape of decision as
+`NotificationSource`: backend-only, opt-in, no manifest slot, must not throw.
+
+- **Introspection stays authoritative.** The base reads Slim's `RouteCollector`
+  after composition and LEFT-JOINs these docs onto it, keyed by
+  `"<METHOD> <pattern>"`. An undocumented route still appears (flagged
+  `documented: false`); a doc entry whose route no longer exists is reported.
+  Documenting can therefore never hide part of the API — and the `pattern` must
+  be the Slim pattern **verbatim**, inline regex included
+  (`/tickets/{id:[0-9]+}`), or the join silently misses.
+- **Entries are plain arrays, not value objects.** With ~160 routes across the
+  composed set, `new RouteDoc(...)` is noise. The shape is pinned by each
+  module's own test instead.
+- **Keep the array in `php/docs/api.php`** and `require` it from `apiDocs()`, so
+  a module with twenty routes does not carry hundreds of lines of prose in the
+  middle of its wiring.
+- **Ship the parity test.** Prose next to code rots; every module asserts that
+  its documented set equals its registered set, so renaming a path fails that
+  module's suite instead of quietly degrading the reference.
+
+`ModuleRegistry::routeOwners()` is the other half. `registerAll()` reads the
+collector before and after each `register()` call and attributes the difference
+to that module — ownership that **cannot be recovered afterwards**, because the
+composed collector is one flat list. Without it the reference has to group by
+first path segment, which drops every module's `/admin/*` routes into one
+undifferentiated bucket. A route missing from the map belongs to the base.
+
 ## Gotchas / invariants
 
 - **No namespacing across extensions.** Everything lands in one build, so a
@@ -195,5 +225,6 @@ docs + version together.
 > pushes the bump commit + the annotated tag. Bumping by hand first makes the
 > workflow skip a version (and, if the field has drifted *behind* the registry, a
 > guaranteed 409). Choose the bump on the button instead — this change is a
-> **minor** (the optional `NotificationSource` capability). Hand-editing is only
-> for reconciling drift, checked against `npm view … versions`.
+> **minor** (the optional `ApiDocSource` capability + `routeOwners()`).
+> Hand-editing is only for reconciling drift, checked against
+> `npm view … versions`.

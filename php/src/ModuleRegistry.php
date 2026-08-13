@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Tds\Frontend\Contract;
 
 use Slim\App;
+use Slim\Interfaces\RouteCollectorInterface;
 
 /**
  * Composes a set of {@see Module}s for one base-API build — the PHP twin of the
@@ -11,7 +12,8 @@ use Slim\App;
  *
  * Resolves dependency (load) order, rejects duplicate module ids / missing
  * dependencies / cycles, then lets the base:
- *   - mount every module's routes in order ({@see registerAll()}),
+ *   - mount every module's routes in order ({@see registerAll()}), recording
+ *     which module each route came from ({@see routeOwners()}),
  *   - collect all Phinx migration dirs for the in-process auto-migrator
  *     ({@see migrationPaths()}),
  *   - gather the merged permission + settings catalog
@@ -21,6 +23,9 @@ final class ModuleRegistry
 {
     /** @var Module[] in resolved dependency order */
     private array $ordered;
+
+    /** @var array<string, string> "<METHOD> <pattern>" => module id, filled by registerAll() */
+    private array $routeOwners = [];
 
     /** @param Module[] $modules in any order */
     public function __construct(array $modules)
@@ -36,12 +41,53 @@ final class ModuleRegistry
         $this->ordered = self::topoSort($byId);
     }
 
-    /** Mount every module's routes on the shared Slim app, in dependency order. */
+    /**
+     * Mount every module's routes on the shared Slim app, in dependency order.
+     *
+     * Also records route ownership: the collector is read before and after each
+     * `register()` call, and whatever appeared in between belongs to that
+     * module. Nothing else can recover this — once composition is done, the
+     * collector holds one flat list with no trace of who added what, which is
+     * why the API reference used to group by first path segment and drop every
+     * module's admin routes into one undifferentiated `admin` bucket.
+     */
     public function registerAll(App $app): void
     {
+        $collector = $app->getRouteCollector();
+        $before = self::routeKeys($collector);
         foreach ($this->ordered as $module) {
             $module->register($app);
+            $after = self::routeKeys($collector);
+            foreach (array_diff($after, $before) as $key) {
+                $this->routeOwners[$key] = $module->id();
+            }
+            $before = $after;
         }
+    }
+
+    /**
+     * Which module mounted which route: `"<METHOD> <pattern>"` => module id.
+     *
+     * Empty until {@see registerAll()} has run, and never contains the base's
+     * own routes — a route missing from this map belongs to the base kernel.
+     *
+     * @return array<string, string>
+     */
+    public function routeOwners(): array
+    {
+        return $this->routeOwners;
+    }
+
+    /** @return string[] "<METHOD> <pattern>" for every route currently mounted */
+    private static function routeKeys(RouteCollectorInterface $collector): array
+    {
+        $keys = [];
+        foreach ($collector->getRoutes() as $route) {
+            foreach ($route->getMethods() as $method) {
+                $keys[] = strtoupper($method) . ' ' . $route->getPattern();
+            }
+        }
+        return $keys;
     }
 
     /**
@@ -119,6 +165,23 @@ final class ModuleRegistry
         return array_values(array_filter(
             $this->ordered,
             static fn (Module $m): bool => $m instanceof NotificationSource,
+        ));
+    }
+
+    /**
+     * The modules that describe their routes for the admin API reference.
+     *
+     * Optional capability, same shape as {@see notificationSources()}: a module
+     * without docs is not an error — its routes are still listed, just without
+     * prose (see {@see ApiDocSource}).
+     *
+     * @return ApiDocSource[] dependency-ordered
+     */
+    public function apiDocSources(): array
+    {
+        return array_values(array_filter(
+            $this->ordered,
+            static fn (Module $m): bool => $m instanceof ApiDocSource,
         ));
     }
 

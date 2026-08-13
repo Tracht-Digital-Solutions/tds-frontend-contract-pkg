@@ -90,11 +90,23 @@ final class TimeTrackerModule extends AbstractModule
 ```
 
 The base API builds a `ModuleRegistry` from the enabled modules and:
-`registerAll($app)` mounts routes in dependency order, `migrationPaths()` feeds
-the in-process auto-migrator, `permissions()` / `settings()` yield the merged
-catalog. **Migration class names must be globally unique** across every module
-(the in-process migrator `include`s them all into one process — a reused class
-name is a fatal redeclaration; prefix with the module id).
+`registerAll($app)` mounts routes in dependency order (recording which module
+each route came from — `routeOwners()`), `migrationPaths()` feeds the in-process
+auto-migrator, `permissions()` / `settings()` yield the merged catalog.
+**Migration class names must be globally unique** across every module (the
+in-process migrator `include`s them all into one process — a reused class name
+is a fatal redeclaration; prefix with the module id).
+
+Two **optional** capabilities a module may additionally implement — both
+backend-only, both without a manifest slot, and neither may throw:
+
+- **`NotificationSource`** — contribute events to the panel's single live
+  notification poll (`GET /me/notifications`).
+- **`ApiDocSource`** — describe this module's routes (summary, params,
+  responses, required permission) for the admin frontend's API reference
+  (`GET /wiki.json`). Route introspection stays authoritative and the docs are
+  joined onto it by `"<METHOD> <pattern>"`, so an undocumented route is still
+  listed. Keep the array in `php/docs/api.php` and `require` it.
 
 ## Develop
 
