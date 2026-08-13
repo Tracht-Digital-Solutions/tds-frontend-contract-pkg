@@ -113,6 +113,28 @@ the admin frontend's API reference (`GET /wiki.json`). Same shape of decision as
 - **Keep the array in `php/docs/api.php`** and `require` it from `apiDocs()`, so
   a module with twenty routes does not carry hundreds of lines of prose in the
   middle of its wiring.
+
+### Optional capability: `MultiCompanyContext` (1.8.0)
+
+The companion to `UserContext` for the principal's **full** membership list.
+`UserContext::activeCompanyId()` is the right answer for data scoping — a
+request reads and writes inside one tenant — and the wrong answer for naming
+the user's company in the profile menu or offering a company switcher.
+
+- **This is why it is not a method on `UserContext`.** Adding one to an
+  interface breaks every *implementer*, not every caller: the base's
+  `JwtUserContext` and `AnonymousUserContext` plus the test doubles in all
+  thirteen extensions. That is not an additive minor, whatever the 1.x promise
+  says about consumers. Opt-in capability + `instanceof`, exactly like
+  `ApiDocSource` and `NotificationSource`.
+- **Probe, then degrade to empty** — never assume the binding implements it:
+  ```php
+  $ids = $user instanceof MultiCompanyContext ? $user->companyIds() : [];
+  ```
+- **Membership is not permission.** A caller still checks `has()` for the
+  active company. And an **admin returns `[]`**: their reach is "any company",
+  which is not belonging to one — returning every company here would turn a
+  convenience accessor into an unbounded directory read.
 - **Ship the parity test.** Prose next to code rots; every module asserts that
   its documented set equals its registered set, so renaming a path fails that
   module's suite instead of quietly degrading the reference.
@@ -224,7 +246,7 @@ docs + version together.
 > `npm version <bump>` over what is committed and writes both files itself, then
 > pushes the bump commit + the annotated tag. Bumping by hand first makes the
 > workflow skip a version (and, if the field has drifted *behind* the registry, a
-> guaranteed 409). Choose the bump on the button instead — this change is a
-> **minor** (the optional `ApiDocSource` capability + `routeOwners()`).
+> guaranteed 409). Choose the bump on the button instead — the pending change
+> is a **minor** (the optional `MultiCompanyContext` capability).
 > Hand-editing is only for reconciling drift, checked against
 > `npm view … versions`.
