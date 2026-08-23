@@ -12,6 +12,7 @@ use Tds\Frontend\Contract\ModuleException;
 use Tds\Frontend\Contract\ModuleRegistry;
 use Tds\Frontend\Contract\NotificationSource;
 use Tds\Frontend\Contract\PermissionDef;
+use Tds\Frontend\Contract\SiteKeyProtected;
 use Tds\Frontend\Contract\UserContext;
 
 /** A test double module with configurable id/deps/permissions. */
@@ -116,6 +117,42 @@ final class FakeRoutingModule extends AbstractModule implements ApiDocSource
     public function apiDocs(): array
     {
         return $this->docs;
+    }
+}
+
+/** A module that declares public site-read prefixes. */
+final class FakeProtectedModule extends AbstractModule implements SiteKeyProtected
+{
+    /**
+     * @param list<string> $prefixes
+     * @param string[]     $deps
+     */
+    public function __construct(
+        private readonly string $id,
+        private readonly array $prefixes = [],
+        private readonly array $deps = [],
+    ) {
+    }
+
+    public function id(): string
+    {
+        return $this->id;
+    }
+
+    /** @return string[] */
+    public function dependsOn(): array
+    {
+        return $this->deps;
+    }
+
+    public function register(App $app): void
+    {
+    }
+
+    /** @return list<string> */
+    public function siteKeyRoutes(): array
+    {
+        return $this->prefixes;
     }
 }
 
@@ -264,5 +301,59 @@ final class ModuleRegistryTest extends TestCase
     {
         $registry = new ModuleRegistry([new FakeRoutingModule('a', [['GET', '/a']])]);
         self::assertSame([], $registry->routeOwners());
+    }
+
+    public function testMergesSiteKeyRoutesInDependencyOrderAndDeduplicates(): void
+    {
+        $registry = new ModuleRegistry([
+            new FakeProtectedModule('b', ['/content/landing', '/content/blog'], ['a']),
+            new FakeProtectedModule('a', ['/content/blog']),
+            new FakeModule('c'),
+        ]);
+
+        // 'a' first (b depends on it); '/content/blog' appears once, claimed by
+        // whichever module declared it first in load order.
+        self::assertSame(
+            ['/content/blog', '/content/landing'],
+            $registry->siteKeyRoutes(),
+        );
+    }
+
+    public function testSiteKeyRoutesIsEmptyWithoutTheCapability(): void
+    {
+        $registry = new ModuleRegistry([new FakeModule('a'), new FakeModule('b')]);
+        self::assertSame([], $registry->siteKeyRoutes());
+    }
+
+    public function testNormalizesATrailingSlashInASiteKeyPrefix(): void
+    {
+        // '/tools/catalog/' and '/tools/catalog' must not count as two prefixes:
+        // the middleware matches by prefix, so the trailing slash changes
+        // nothing about what is protected and everything about the dedup.
+        $registry = new ModuleRegistry([
+            new FakeProtectedModule('a', ['/tools/catalog/']),
+            new FakeProtectedModule('b', ['/tools/catalog']),
+        ]);
+        self::assertSame(['/tools/catalog'], $registry->siteKeyRoutes());
+    }
+
+    public function testRejectsARelativeSiteKeyPrefix(): void
+    {
+        // A relative prefix matches no request path, so the route would be
+        // served unprotected and look deliberate. Fail loudly instead.
+        $registry = new ModuleRegistry([new FakeProtectedModule('a', ['content/blog'])]);
+        $this->expectException(ModuleException::class);
+        $this->expectExceptionMessage('absolute path');
+        $registry->siteKeyRoutes();
+    }
+
+    public function testRejectsAnAdminSiteKeyPrefix(): void
+    {
+        // A site key is a machine credential for public content. Letting one
+        // cover an admin route would turn a CI secret into panel access.
+        $registry = new ModuleRegistry([new FakeProtectedModule('a', ['/admin/tools'])]);
+        $this->expectException(ModuleException::class);
+        $this->expectExceptionMessage('never by a site key');
+        $registry->siteKeyRoutes();
     }
 }

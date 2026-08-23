@@ -139,6 +139,47 @@ the user's company in the profile menu or offering a company switcher.
   its documented set equals its registered set, so renaming a path fails that
   module's suite instead of quietly degrading the reference.
 
+### Optional capability: `SiteKeyProtected` + the `SiteKeys` service (1.9.0)
+
+Three additions, one subject: **site keys**, the credential that binds a public
+static site (landingpage / blog / tools / auth, or a custom one) to this API.
+
+- **`SiteKeys`** — a *service* interface, not a module capability. The base binds
+  its implementation into the container under this key, exactly like `Mailer` /
+  `SettingsStore` / `UserContext`, so a module resolves it null-safely
+  (`$c->has(SiteKeys::class)`) and keeps working against a base that predates the
+  feature or has no database yet. `verify()` returns a `SiteKeyIdentity` or
+  `null`; `enforcement()` is `off` / `warn` / `enforce`.
+- **`SiteKeyIdentity`** — a value object rather than a bare `true`, because
+  `POST /tools/registry` has to know it was the *tools* site that presented the
+  key. The obvious workaround for a boolean — trusting a `site` field the caller
+  sent next to the key — is exactly the bug the shape prevents. It never carries
+  the key: the plaintext exists once, in the response of `POST /admin/sites`.
+- **`SiteKeyProtected`** — the module capability. A module declares which of its
+  own routes count as public *site reads*, and the base's middleware protects
+  exactly those. The base must not carry a coded path list: a prefix that stops
+  matching after a rename fails **silently**, by serving the route unprotected.
+  Same ownership rule as `routeOwners()` and `ApiDocSource`.
+
+Four rules that only look pedantic until one of them costs a day:
+
+- **Prefixes, not patterns.** The middleware runs before routing resolves a
+  pattern. `/content/blog` also covers `/content/blog/mein-artikel` — and
+  `/content` would cover another module's routes too, which is how one extension
+  ends up gating another's surface. `siteKeyRoutes()` normalises a trailing
+  slash and deduplicates, so an overlap is collapsed rather than counted twice.
+- **Never declare an admin route.** `ModuleRegistry::siteKeyRoutes()` throws on
+  an `/admin` prefix. A site key is a machine credential for reading public
+  content; accepting one on an admin route would turn a CI secret into panel
+  access.
+- **Never declare a route a visitor's browser calls** — the contact form, the
+  live-chat widget, the account menu. Those have no key and never will, so
+  listing one turns `enforce` into an outage on the public site.
+- **`enforcement()` is three-valued on purpose.** `warn` is the migration path:
+  it serves and counts, so an operator can see which sites are still keyless
+  *before* anything is rejected. Same shape, same reason, as support-tickets'
+  `ingest_mode`.
+
 `ModuleRegistry::routeOwners()` is the other half. `registerAll()` reads the
 collector before and after each `register()` call and attributes the difference
 to that module — ownership that **cannot be recovered afterwards**, because the

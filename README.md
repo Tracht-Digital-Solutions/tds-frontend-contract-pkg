@@ -107,6 +107,17 @@ backend-only, both without a manifest slot, and neither may throw:
   (`GET /wiki.json`). Route introspection stays authoritative and the docs are
   joined onto it by `"<METHOD> <pattern>"`, so an undocumented route is still
   listed. Keep the array in `php/docs/api.php` and `require` it.
+- **`SiteKeyProtected`** — declare this module's **public site-read** path
+  prefixes (`['/content/blog', …]`). The base's site-key middleware protects
+  exactly those. Prefixes, not patterns; never an `/admin` route (the registry
+  throws), and never a route a visitor's browser calls.
+
+Plus one service interface the base binds into the container:
+
+- **`SiteKeys`** — verify the credential a public static site presents
+  (`verify()` → `SiteKeyIdentity|null`) and read the enforcement policy
+  (`enforcement()` → `off` / `warn` / `enforce`). Resolve it null-safely; a base
+  without a database has no site keys and must still serve.
 
 ## Develop
 

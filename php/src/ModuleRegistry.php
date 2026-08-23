@@ -186,6 +186,58 @@ final class ModuleRegistry
     }
 
     /**
+     * The path prefixes that count as public site reads, merged across modules.
+     *
+     * Optional capability ({@see SiteKeyProtected}); a module that declares
+     * nothing is not an error. The result feeds the base's site-key middleware,
+     * which compares a request path against these as prefixes.
+     *
+     * Two rules are enforced here rather than left to review, because both fail
+     * silently: a prefix must be an absolute path (a relative one matches
+     * nothing and looks exactly like a route somebody decided not to protect),
+     * and no module may claim an `/admin` prefix — a site key is a machine
+     * credential for reading public content, never a second way into the admin
+     * surface.
+     *
+     * Duplicates are collapsed rather than rejected: two modules serving the
+     * same public prefix is unusual but not wrong, and a hard error would make
+     * the whole base unbootable over a cosmetic overlap.
+     *
+     * @return list<string> deduplicated, dependency-ordered
+     */
+    public function siteKeyRoutes(): array
+    {
+        $out = [];
+        $seen = [];
+        foreach ($this->ordered as $module) {
+            if (!$module instanceof SiteKeyProtected) {
+                continue;
+            }
+            foreach ($module->siteKeyRoutes() as $declared) {
+                $prefix = rtrim(trim((string) $declared), '/');
+                if ($prefix === '' || $prefix[0] !== '/') {
+                    throw new ModuleException(
+                        "Module \"{$module->id()}\" declared an invalid site-key prefix "
+                        . "\"{$declared}\" (must be an absolute path)",
+                    );
+                }
+                if ($prefix === '/admin' || str_starts_with($prefix, '/admin/')) {
+                    throw new ModuleException(
+                        "Module \"{$module->id()}\" declared \"{$prefix}\" as a site-key route; "
+                        . 'admin routes are gated by UserContext, never by a site key',
+                    );
+                }
+                if (isset($seen[$prefix])) {
+                    continue;
+                }
+                $seen[$prefix] = true;
+                $out[] = $prefix;
+            }
+        }
+        return $out;
+    }
+
+    /**
      * Kahn-style topological sort by dependsOn.
      *
      * @param array<string, Module> $byId
