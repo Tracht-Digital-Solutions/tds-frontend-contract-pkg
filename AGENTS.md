@@ -66,6 +66,16 @@ config:
   false. NB adding a method here is breaking for *implementers* (the core) but not
   for callers (extensions) — bump the core's impls in lockstep.
 - **`PDO`** — the shared DB connection (standard class, no contract type).
+- **`SiteCache`** (+ the `CacheEvent` value object, 1.10.0) — tells a public site to
+  re-render the cached HTML of the pages one content change affects. The public sites run
+  Astro SSR behind a file-backed full-page cache, so a saved block or post is invisible
+  until its page is rendered again. **The event names CONTENT, never a URL**
+  (`{type:'post', id:'slug', lang:'de'}`): only the site knows its own route table, and one
+  post also dates the index, category, tag, author, archive and feed pages — whose English
+  routes are not even a prefix of the German ones (`/kategorie/…` vs `/en/category/…`). It
+  **never throws**: a site that is down, moved or not yet configured must not turn "save
+  this article" into an error. Not to be confused with the CMS modules' workflow-dispatch
+  rebuild, which rebuilds the *repository* and is for design and code changes.
 
 These interfaces are the shared vocabulary the base implements and modules
 consume — the PHP analogue of the shared permission catalog.
