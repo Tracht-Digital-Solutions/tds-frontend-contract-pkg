@@ -232,6 +232,14 @@ undifferentiated bucket. A route missing from the map belongs to the base.
     `node_modules/.tds-panel/routes/` → `.tds-frontend/routes/`. It is a build
     artifact, so nothing needs migrating, but an old directory may linger in a
     long-lived local `node_modules` (harmless — CI installs fresh).
+- **Toolchain floor: TypeScript 6, vitest 4, tsup 8.5 (2026-08-25).**
+  `tsconfig.json` carries `"types": ["node"]` and `"ignoreDeprecations": "6.0"`,
+  and neither is optional: TypeScript 6 stops resolving `node:*` on a **fresh**
+  install without the first (green locally, red in CI, same commit), and tsup's
+  d.ts step sets a deprecated `baseUrl` unconditionally, which TypeScript 6
+  rejects — the DTS build dies while `tsc --noEmit` passes. TypeScript 7 throws
+  in that same tsup code path, so it is not a deferred decision; it does not
+  build.
 - **`vitest.config.ts` pins `include: ["src/**/*.test.ts"]` on purpose.** With
   vitest's default glob, any `.claude/worktrees/*/src/**` checkout in the repo is
   swept into the run, so the suite silently reports *another branch's* tests as
@@ -248,7 +256,7 @@ undifferentiated bucket. A route missing from the map belongs to the base.
 ```bash
 npm run build        # tsup → dual ESM+CJS
 npm run type-check   # tsc --noEmit — must be 0 errors
-npm run test:run     # vitest, 66 tests (composition + the Astro host)
+npm run test:run     # vitest, 71 tests (composition + the Astro host)
 composer test        # phpunit (ModuleRegistry)
 ```
 
