@@ -7,6 +7,8 @@
 
 export type {
   ComposedRegistry,
+  CacheRefreshReport,
+  CacheRefreshStatus,
   ExtensionManifest,
   I18nStrings,
   NavEntry,
@@ -14,6 +16,10 @@ export type {
   NotificationItem,
   PermissionDef,
   RouteDef,
+  SiteConnectionIdentityView,
+  SiteConnectionStatus,
+  SiteConnectionView,
+  SitePairingDeliveryView,
   SettingsPanel,
   WidgetManifest,
   WidgetSize,

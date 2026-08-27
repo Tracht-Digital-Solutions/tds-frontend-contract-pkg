@@ -28,6 +28,28 @@ final class SiteKeyIdentity
         public readonly string $label = '',
         /** The origin declared when the key was issued; may be empty. */
         public readonly string $origin = '',
+        /** CMS resource type (`blog`, `website`, `tools`) when paired. */
+        public readonly ?string $resourceType = null,
+        /** Stable id in that CMS resource type. */
+        public readonly ?string $resourceId = null,
+        /** Deterministic content bindings carried by this key. @var array<string,mixed> */
+        public readonly array $bindings = [],
+        /** Public route prefixes this key may read. @var list<string> */
+        public readonly array $scopes = [],
     ) {
+    }
+
+    public function allows(string $route): bool
+    {
+        if ($this->scopes === []) {
+            return true;
+        }
+        foreach ($this->scopes as $prefix) {
+            $prefix = rtrim($prefix, '/');
+            if ($route === $prefix || str_starts_with($route, $prefix . '/')) {
+                return true;
+            }
+        }
+        return false;
     }
 }

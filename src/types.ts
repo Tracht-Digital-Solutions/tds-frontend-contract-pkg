@@ -165,6 +165,55 @@ export interface NotificationFeed {
   items: NotificationItem[];
 }
 
+/** Secret-free CMS resource connection returned to the admin frontend. */
+export type SiteConnectionStatus = "needs_pairing" | "pending" | "connected";
+
+export interface SiteConnectionView {
+  id: number;
+  resource_type: "blog" | "website" | "tools";
+  resource_id: string;
+  origin: string;
+  profile: "blog" | "landingpage" | "tools";
+  bindings: Record<string, unknown>;
+  scopes: string[];
+  status: SiteConnectionStatus;
+  site_key_id: number | null;
+  paired_at: string | null;
+  last_seen_at: string | null;
+}
+
+/** Pairing delivery never exposes the pairing, site-key, or cache token. */
+export interface SitePairingDeliveryView {
+  delivered: boolean;
+  status: SiteConnectionStatus;
+  connection: SiteConnectionView | null;
+  /** Contains the short-lived token only in the URL fragment. */
+  fallback_url: string | null;
+  expires_at: string;
+  error: string | null;
+}
+
+export type CacheRefreshStatus = "refreshed" | "not_configured" | "failed" | "skipped";
+
+export interface CacheRefreshReport {
+  cache_status: CacheRefreshStatus;
+  cached: boolean;
+  rebuilt: string[];
+  skipped: string[];
+  failed: unknown[];
+  unknownEvents: unknown[];
+}
+
+/** Secret-free request identity projected by a resource-bound site key. */
+export interface SiteConnectionIdentityView {
+  site_key_id: number | null;
+  site: string;
+  resource_type: "blog" | "website" | "tools" | null;
+  resource_id: string | null;
+  bindings: Record<string, unknown>;
+  scopes: string[];
+}
+
 /**
  * The flattened result of composing a set of extensions for one product build.
  * Produced by `composeExtensions` and consumed by the host shell + Astro
