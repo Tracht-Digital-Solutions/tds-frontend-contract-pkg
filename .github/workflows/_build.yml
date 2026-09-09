@@ -65,6 +65,18 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
           scope: '@tracht-digital-solutions'
 
+      - name: Pin npm
+        # Node 22 ships npm 10, whose arborist crashes with
+        # "Cannot read properties of null (reading 'edgesOut')" on some
+        # dependency graphs. `--no-package-lock` below re-resolves every range
+        # on every run, so a publish by any dependency can change the graph
+        # between two builds of the SAME commit — the failure then arrives on a
+        # commit that touched no manifest. That is the trade for a lockfile this
+        # repo cannot use; the cost is that the npm doing the resolving has to
+        # be current. Carried by every repo in the workspace that installs this
+        # way, so the step does not have to be rediscovered per repo.
+        run: npm install -g npm@11
+
       - name: Install
         # NOT `npm ci` + a committed lockfile: a Windows-generated package-lock
         # pins only the win32 rollup/esbuild optional binaries, so `npm ci` on
