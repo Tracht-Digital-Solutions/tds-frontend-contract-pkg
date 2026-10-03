@@ -57,6 +57,9 @@ populates** with the services extensions may need. Modules resolve them via
 `$app->getContainer()->get(...)` — they never re-implement auth, email, or DB
 config:
 
+- **`ModuleHttp`** (trait, 1.12) — `json()`, `require($user, $permission)` and
+  `requireAdmin($user)` for route closures. `use ModuleHttp;` in the module
+  class; do not copy them into a module again (fifteen copies existed).
 - **`Mailer`** (+ the `Email` value object) — the core's SMTP sender. Config +
   From identity live in the base; a module only builds an `Email` and sends it.
   Unconfigured SMTP → a no-op mailer (`isConfigured()` false).
