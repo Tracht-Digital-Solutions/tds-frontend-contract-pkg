@@ -57,6 +57,12 @@ populates** with the services extensions may need. Modules resolve them via
 `$app->getContainer()->get(...)` — they never re-implement auth, email, or DB
 config:
 
+- **`Stripe\StripeApi`** (1.13) — the platform's one Stripe connection,
+  configured centrally under Einstellungen → Zahlungen and bound by the core.
+  Resolve it from the container; keep only the domain call (invoice, checkout
+  session) in the module. A module-level key may still override it
+  (`new CurlStripeApi($key)`). Verify webhooks with `Stripe\StripeWebhook`, and
+  implement `Stripe\StripeWebhookSource` so the admin panel lists the endpoint.
 - **`ModuleHttp`** (trait, 1.12) — `json()`, `require($user, $permission)` and
   `requireAdmin($user)` for route closures. `use ModuleHttp;` in the module
   class; do not copy them into a module again (fifteen copies existed).
