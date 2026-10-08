@@ -21,3 +21,6 @@ Desktop.ini
 
 # Windows-generated npm lockfile is win32-only; CI uses npm install --no-package-lock
 package-lock.json
+
+# Local agent state
+.claude/
