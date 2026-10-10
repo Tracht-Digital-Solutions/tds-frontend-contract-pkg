@@ -169,6 +169,22 @@ final class ModuleRegistry
     }
 
     /**
+     * The modules that report unconfigured functions to the setup wizard.
+     *
+     * Optional capability, same shape as {@see notificationSources()} (see
+     * {@see SetupStatusSource}).
+     *
+     * @return SetupStatusSource[] dependency-ordered
+     */
+    public function setupStatusSources(): array
+    {
+        return array_values(array_filter(
+            $this->ordered,
+            static fn (Module $m): bool => $m instanceof SetupStatusSource,
+        ));
+    }
+
+    /**
      * The modules that describe their routes for the admin API reference.
      *
      * Optional capability, same shape as {@see notificationSources()}: a module

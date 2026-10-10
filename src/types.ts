@@ -165,6 +165,38 @@ export interface NotificationFeed {
   items: NotificationItem[];
 }
 
+/**
+ * One entry of the panel's setup wizard (`GET /me/setup-status`).
+ *
+ * The wire shape of the PHP `SetupStatusSource` capability plus what the base
+ * adds per user. Like notifications, a module joins on the BACKEND; there is
+ * no manifest slot. `SettingsPanel.inSetupWizard` stays the frontend's hint
+ * for which settings sections the wizard links into.
+ */
+export interface SetupItem {
+  /** Globally unique and stable, `"<module-id>:<key>"` — choices are stored by it. */
+  id: string;
+  module: string;
+  /** German, names the function. */
+  title: string;
+  /** German, what does not work until it is set up. */
+  description: string;
+  state: "ok" | "missing" | "partial";
+  level: "required" | "recommended" | "optional";
+  /** Panel path where it is set up, usually `/einstellungen#<panel-id>`. */
+  href: string;
+  /** Added by the base: put off until the next sign-in ("Später"). */
+  snoozed?: boolean;
+  /** Added by the base: hidden for good ("Ignorieren"), restorable. */
+  ignored?: boolean;
+}
+
+/** The wizard response. `open` counts items that are not ok, snoozed or ignored. */
+export interface SetupStatus {
+  items: SetupItem[];
+  open: number;
+}
+
 /** Secret-free CMS resource connection returned to the admin frontend. */
 export type SiteConnectionStatus = "needs_pairing" | "pending" | "connected";
 

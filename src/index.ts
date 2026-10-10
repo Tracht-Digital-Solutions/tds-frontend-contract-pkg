@@ -21,6 +21,8 @@ export type {
   SiteConnectionView,
   SitePairingDeliveryView,
   SettingsPanel,
+  SetupItem,
+  SetupStatus,
   WidgetManifest,
   WidgetSize,
 } from "./types.js";

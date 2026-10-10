@@ -34,6 +34,15 @@ error.
 
 Optional means a module that doesn't implement it stays valid, which keeps each addition a minor.
 
+### `SetupStatusSource` (1.14)
+
+Reports a module's unconfigured functions to the panel's setup wizard (`GET /me/setup-status`,
+page `/einrichtung`). The base merges sources and applies each user's "Später" (until the next
+`auth_time`) and "Ignorieren". TS twin: `SetupItem` / `SetupStatus`.
+
+- Item ids are **stable** (`"<module>:<key>"`); the user's choice is stored by them.
+- Report `ok` items too, never a secret, never throw, no network calls.
+
 ### `NotificationSource` (1.6)
 
 Feeds the panel's live notifications. The shell polls **one** endpoint (`GET /me/notifications`);

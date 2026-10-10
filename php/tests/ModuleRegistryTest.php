@@ -11,6 +11,7 @@ use Tds\Frontend\Contract\ApiDocSource;
 use Tds\Frontend\Contract\ModuleException;
 use Tds\Frontend\Contract\ModuleRegistry;
 use Tds\Frontend\Contract\NotificationSource;
+use Tds\Frontend\Contract\SetupStatusSource;
 use Tds\Frontend\Contract\PermissionDef;
 use Tds\Frontend\Contract\SiteKeyProtected;
 use Tds\Frontend\Contract\UserContext;
@@ -236,6 +237,21 @@ final class ModuleRegistryTest extends TestCase
         self::assertSame(['early', 'late'], $ids);
     }
 
+    public function testCollectsSetupStatusSourcesInDependencyOrder(): void
+    {
+        $registry = new ModuleRegistry([
+            new FakeSetupModule('late', ['plain']),
+            new FakeModule('plain'),
+            new FakeSetupModule('early'),
+        ]);
+
+        $ids = array_map(
+            static fn (object $m): string => $m->id(), // @phpstan-ignore-line
+            $registry->setupStatusSources(),
+        );
+        self::assertSame(['early', 'late'], $ids);
+    }
+
     public function testAModuleWithoutTheCapabilityIsNotAnError(): void
     {
         // NotificationSource is optional — most modules never implement it, and
@@ -243,6 +259,7 @@ final class ModuleRegistryTest extends TestCase
         $registry = new ModuleRegistry([new FakeModule('a'), new FakeModule('b')]);
         self::assertSame([], $registry->notificationSources());
         self::assertSame([], $registry->apiDocSources());
+        self::assertSame([], $registry->setupStatusSources());
     }
 
     public function testCollectsApiDocSourcesInDependencyOrder(): void
@@ -355,5 +372,35 @@ final class ModuleRegistryTest extends TestCase
         $this->expectException(ModuleException::class);
         $this->expectExceptionMessage('never by a site key');
         $registry->siteKeyRoutes();
+    }
+}
+
+final class FakeSetupModule extends AbstractModule implements SetupStatusSource
+{
+    /** @param string[] $deps */
+    public function __construct(
+        private readonly string $id,
+        private readonly array $deps = [],
+    ) {
+    }
+
+    public function id(): string
+    {
+        return $this->id;
+    }
+
+    /** @return string[] */
+    public function dependsOn(): array
+    {
+        return $this->deps;
+    }
+
+    public function register(App $app): void
+    {
+    }
+
+    public function setupItems(UserContext $user): array
+    {
+        return [];
     }
 }
