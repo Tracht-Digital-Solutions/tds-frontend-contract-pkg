@@ -185,6 +185,35 @@ final class ModuleRegistry
     }
 
     /**
+     * The modules that react to other modules' sales.
+     *
+     * Optional capability, same shape as {@see notificationSources()}; the base
+     * hands the result to {@see Commerce\SaleEvents} (see {@see Commerce\SaleListener}).
+     *
+     * @return Commerce\SaleListener[] dependency-ordered
+     */
+    public function saleListeners(): array
+    {
+        return array_values(array_filter(
+            $this->ordered,
+            static fn (Module $m): bool => $m instanceof Commerce\SaleListener,
+        ));
+    }
+
+    /**
+     * The modules that own partner codes (see {@see Commerce\ReferralResolver}).
+     *
+     * @return Commerce\ReferralResolver[] dependency-ordered
+     */
+    public function referralResolvers(): array
+    {
+        return array_values(array_filter(
+            $this->ordered,
+            static fn (Module $m): bool => $m instanceof Commerce\ReferralResolver,
+        ));
+    }
+
+    /**
      * The modules that describe their routes for the admin API reference.
      *
      * Optional capability, same shape as {@see notificationSources()}: a module

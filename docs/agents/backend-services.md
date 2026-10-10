@@ -43,6 +43,19 @@ page `/einrichtung`). The base merges sources and applies each user's "Später" 
 - Item ids are **stable** (`"<module>:<key>"`); the user's choice is stored by them.
 - Report `ok` items too, never a secret, never throw, no network calls.
 
+### `Commerce\SaleListener` + `Commerce\ReferralResolver` (1.15)
+
+Lets a selling module (shop, billing) tell others about a paid or reversed sale, and ask whose
+partner code a buyer brought, without knowing who listens. The base binds `Commerce\SaleEvents`,
+built from `ModuleRegistry::saleListeners()` / `referralResolvers()`; sellers call `paid()`,
+`reversed()` and `resolveReferral()` on it.
+
+- Sellers dispatch `paid()` on **every** paid delivery; listeners key rows by `(source, sourceId)`.
+- Amounts are **net** cents.
+- `SaleEvents` guards each call; an empty instance is a no-op, so resolve with `has()` +
+  `instanceof` and carry on without it.
+- An unknown code is `null`, never an error; it must not block a purchase.
+
 ### `NotificationSource` (1.6)
 
 Feeds the panel's live notifications. The shell polls **one** endpoint (`GET /me/notifications`);
